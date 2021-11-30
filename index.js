@@ -96,17 +96,17 @@ async function glideToPos(sx, sy, ex, ey) {
     return new Promise(async res => {
         for (let x = sx, y = sy; Math.round(x) != Math.round(ex) || Math.round(y) != Math.round(ey); x, y) {
             await new Promise(res => {
-                ctx.beginPath();        
+                ctx.beginPath();
                 let color = getColor(x, y);
                 Object.keys(color).forEach(c => color[c] = color[c] < 0 ? 0 : Math.round(color[c] * 255) / 255);
                 let gradient = ctx.createLinearGradient(x, y, x, y + canvas.height / 30);
                 try {
-                gradient.addColorStop(0, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
-                gradient.addColorStop(0.8, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
-                color.r /= 1.2;
-                color.g /= 1.2;
-                color.b /= 1.2;
-                gradient.addColorStop(1, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
+                    gradient.addColorStop(0, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
+                    gradient.addColorStop(0.8, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
+                    color.r /= 1.2;
+                    color.g /= 1.2;
+                    color.b /= 1.2;
+                    gradient.addColorStop(1, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
                 } catch {
                     throw new Error(`Failed color: ${color.r},${color.g},${color.b}`);
                 }
@@ -128,6 +128,7 @@ function sleep(ms) { // Usefull function to have in basically any code, I recomm
 async function doIt() {
     const b = new bar.bar();
     let count = 30;
+    count = canvas.width / canvas.height > 2 ? 30 + Math.round((canvas.width - canvas.height * 2) / (canvas.height / 7.5)) : count;
     b.addBar('Progress', `lines`, 0, count);
     for (let i = 0; i < count; i++) {
         await new Promise(async res => {
@@ -195,7 +196,7 @@ async function doIt() {
         .then(b => {
             right.b = parseFloat(b);
         });
-    await getInput('Scale, 0-15 (I recommend 0): ')
+    await getInput('Center color spread, -1 to 15 (I recommend 0.2 for large monitors, and -0.1 for small ones :D): ')
         .then(b => {
             bleed = 1 + 0.4 * parseFloat(b);
         });
