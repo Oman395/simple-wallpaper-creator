@@ -39,17 +39,17 @@ const canvas = new c.Canvas(1920, 1080);
 const ctx = canvas.getContext('2d');
 canvas.width = 1920;
 canvas.height = 1080;
-var left = { // Values are between 0 and 1
+let left = { // Values are between 0 and 1
     r: 1,
     g: 0,
     b: 0
 }
-var center = {
+let center = {
     r: 0,
     g: 0,
     b: 1
 }
-var right = {
+let right = {
     r: 0,
     g: 1,
     b: 0
@@ -60,21 +60,32 @@ function getInput(prompt) {
         process.stdin.once('data', data => resolve(data.toString().trim()));
     });
 }
-
-function getColor(x, y) {
-    var distFromCenter = Math.abs(x - canvas.width / 2) / (canvas.width / 2);
-    var leftR = (1 - x / canvas.width) * left.r;
-    var centerR = (1 - distFromCenter) * center.r;
-    var rightR = (x / canvas.width) * right.r;
-    var leftG = (1 - x / canvas.width) * left.g;
-    var centerG = (1 - distFromCenter) * center.g;
-    var rightG = (x / canvas.width) * right.g;
-    var leftB = (1 - x / canvas.width) * left.b;
-    var centerB = (1 - distFromCenter) * center.b;
-    var rightB = (x / canvas.width) * right.b;
-    var r = leftR + centerR + rightR;
-    var g = leftG + centerG + rightG;
-    var b = leftB + centerB + rightB;
+let bleed = 0.5;
+function getColor(x) {
+    x /= canvas.width;
+    let distFromLeft = (-2 * x + 1) ** bleed;
+    distFromLeft = isNaN(distFromLeft) ? 0 : distFromLeft;
+    let distFromRight = (2 * x - 1) ** bleed;
+    distFromRight = isNaN(distFromRight) ? 0 : distFromRight;
+    let distFromCenter = 1 - Math.abs(distFromRight - distFromLeft) / 2;
+    distFromLeft = distFromLeft < 0 ? 0 : distFromLeft;
+    distFromRight = distFromRight < 0 ? 0 : distFromRight;
+    distFromCenter = distFromCenter < 0 ? 0 : distFromCenter;
+    distFromLeft = distFromLeft > 1 ? 1 : distFromLeft;
+    distFromRight = distFromRight > 1 ? 1 : distFromRight;
+    distFromCenter = distFromCenter > 1 ? 1 : distFromCenter
+    let leftR = distFromLeft * left.r;
+    let centerR = distFromCenter * center.r;
+    let rightR = distFromRight * right.r;
+    let leftG = distFromLeft * left.g;
+    let centerG = distFromCenter * center.g;
+    let rightG = distFromRight * right.g;
+    let leftB = distFromLeft * left.b;
+    let centerB = distFromCenter * center.b;
+    let rightB = distFromRight * right.b;
+    let r = leftR + centerR + rightR;
+    let g = leftG + centerG + rightG;
+    let b = leftB + centerB + rightB;
     r = r > 1 ? 1 : r;
     g = g > 1 ? 1 : g;
     b = b > 1 ? 1 : b;
@@ -83,19 +94,24 @@ function getColor(x, y) {
 
 async function glideToPos(sx, sy, ex, ey) {
     return new Promise(async res => {
-        for (var x = sx, y = sy; Math.round(x) != Math.round(ex) || Math.round(y) != Math.round(ey); x, y) {
+        for (let x = sx, y = sy; Math.round(x) != Math.round(ex) || Math.round(y) != Math.round(ey); x, y) {
             await new Promise(res => {
-                ctx.beginPath();
-                var color = getColor(x, y);
-                var gradient = ctx.createLinearGradient(x, y, x, y + canvas.height / 30);
+                ctx.beginPath();        
+                let color = getColor(x, y);
+                Object.keys(color).forEach(c => color[c] = color[c] < 0 ? 0 : Math.round(color[c] * 255) / 255);
+                let gradient = ctx.createLinearGradient(x, y, x, y + canvas.height / 30);
+                try {
                 gradient.addColorStop(0, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
                 gradient.addColorStop(0.8, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
                 color.r /= 1.2;
                 color.g /= 1.2;
                 color.b /= 1.2;
                 gradient.addColorStop(1, `#${Math.round(color.r * 255).toString(16).padStart(2, '0')}${Math.round(color.g * 255).toString(16).padStart(2, '0')}${Math.round(color.b * 255).toString(16).padStart(2, '0')}`);
+                } catch {
+                    throw new Error(`Failed color: ${color.r},${color.g},${color.b}`);
+                }
                 ctx.fillStyle = gradient;
-                var mod = 1;
+                let mod = 1;
                 ctx.fillRect(x, y, canvas.height / 30 + mod, canvas.height / 30);
                 if (Math.round(x) != Math.round(ex)) x += Math.sign(ex - x);
                 if (Math.round(y) != Math.round(ey)) y += Math.sign(ey - y);
@@ -111,25 +127,26 @@ function sleep(ms) { // Usefull function to have in basically any code, I recomm
 }
 async function doIt() {
     const b = new bar.bar();
-    b.addBar('Progress', `lines (The code makes more lines than needed so that diff ratios are supported, and I'm too lazy to fix it)`, 0, 60);
-    for (var i = 0; i < 60; i++) {
+    let count = 30;
+    b.addBar('Progress', `lines`, 0, count);
+    for (let i = 0; i < count; i++) {
         await new Promise(async res => {
-            var x1 = canvas.width / 2 - (canvas.height / 15) * i - canvas.height / 30;
-            var ys = x1 > -canvas.height / 15 ? 0 : Math.abs(x1) - canvas.height / 15;
+            let x1 = canvas.width / 2 - (canvas.height / 15) * i - canvas.height / 30;
+            let ys = x1 > -canvas.height / 15 ? 0 : Math.abs(x1) - canvas.height / 15;
             x1 = x1 < -canvas.height / 15 ? -canvas.height / 15 : x1;
-            var x2 = canvas.width - x1;
+            let x2 = canvas.width - x1;
             x1 -= canvas.height / 30; // Doing this after b/c it makes x2 easier to generate, b/c for whatever reason it fucks with the inversion
-            var y = i * (canvas.height / 30);
+            let y = i * (canvas.height / 30);
+            ys = ys - canvas.height / 30 > y ? y : ys;
             await glideToPos(x1, -canvas.height / 30 + ys, canvas.width / 2 - canvas.height / 60 + 1, y);
             await glideToPos(x2, -canvas.height / 30 + ys, canvas.width / 2 - canvas.height / 60 - 1, y);
-            b.update(i + 1, 60, 'Progress');
-            var buffer = canvas.toBuffer();
+            b.update(i + 1, count, 'Progress');
+            let buffer = canvas.toBuffer();
             fs.writeFile('output.png', buffer, res);
         });
     }
-    var buffer = canvas.toBuffer();
+    let buffer = canvas.toBuffer();
     fs.writeFileSync('output.png', buffer);
-    console.log('Done!');
 }
 
 (async () => { // Shitty ass code to get the user input, but it works
@@ -177,6 +194,10 @@ async function doIt() {
     await getInput('Enter right B: ')
         .then(b => {
             right.b = parseFloat(b);
+        });
+    await getInput('Scale, 0-15 (I recommend 0): ')
+        .then(b => {
+            bleed = 1 + 0.4 * parseFloat(b);
         });
     doIt();
 })();
