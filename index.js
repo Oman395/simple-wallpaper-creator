@@ -150,7 +150,7 @@ async function doIt() {
     fs.writeFileSync('output.png', buffer);
 }
 
-(async () => { // Shitty ass code to get the user input, but it works
+(async () => { // Shitty ass code to get the user input, but it works lol
     await getInput('Enter width: ')
         .then(r => {
             canvas.width = parseInt(r);
