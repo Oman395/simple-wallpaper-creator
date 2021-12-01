@@ -203,7 +203,7 @@ async function doIt() {
     doIt();
 })();
 
-process.on('uncaughtException', async err => { // Mostly used for debugging packaging into an executable, so that I can view errors b4 the window closes.
+process.on('uncaughtException', async err => { // Mostly used for debugging packaging into an executable, so that I can view errors before the window closes.
     console.error(err);
     await sleep(1000);
     fs.writeFileSync('err.txt', err.toString());
